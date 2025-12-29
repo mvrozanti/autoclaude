@@ -176,14 +176,28 @@ func (m *Model) pollPanes() {
 		// Check rate limit status for Claude Code panes
 		if pane.HasClaudeCode {
 			status := detection.CheckRateLimit(content)
-			pane.WasRateLimited = pane.IsRateLimited
+			wasLimited := pane.IsRateLimited
+			pane.WasRateLimited = wasLimited
 			pane.IsRateLimited = status.IsLimited
 			pane.RateLimitResets = status.ResetsAt
+
+			// Auto-continue: if rate limit just reset and mode is auto
+			if wasLimited && !status.IsLimited && pane.Mode == tmux.ModeContinueOnRateLimit {
+				m.sendContinue(pane.ID)
+			}
 		} else {
 			pane.IsRateLimited = false
 			pane.RateLimitResets = ""
 		}
 	}
+}
+
+// sendContinue sends the continue command sequence to a pane
+func (m *Model) sendContinue(paneID string) {
+	// Send: Enter, "continue", Enter
+	_ = tmux.SendKeys(paneID, "Enter")
+	_ = tmux.SendKeys(paneID, "continue")
+	_ = tmux.SendKeys(paneID, "Enter")
 }
 
 func (m *Model) updateLayout(layout *tmux.Layout) {
