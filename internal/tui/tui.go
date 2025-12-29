@@ -11,7 +11,7 @@ import (
 	"github.com/henryaj/autoclaude/internal/tmux"
 )
 
-const pollInterval = 10 * time.Second
+const pollInterval = 3 * time.Second
 
 // Colors - bold, high-contrast palette
 var (
@@ -501,9 +501,9 @@ sends "continue" when rate limits reset.
 
   When a Claude Code pane shows "limit reached ∙ resets Xpm",
   autoclaude waits for that time to pass, then sends:
-  Enter → "continue" → Enter
+  Escape → "continue" → Enter
 
-  Polling occurs every 10 seconds.
+  Polling occurs every 3 seconds.
 
 ` + dimTextStyle.Render("Made by Henry Stanley (henrystanley.com)") + `
 ` + dimTextStyle.Render("Built with Claude Code")

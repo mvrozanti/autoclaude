@@ -71,10 +71,10 @@ autoclaude
 
 ## How It Works
 
-1. autoclaude polls tmux panes every 10 seconds
+1. autoclaude polls tmux panes every 3 seconds
 2. It detects Claude Code by looking for characteristic UI patterns
 3. When it finds "limit reached ∙ resets Xpm", it parses the reset time
-4. When the reset time passes, it sends: `Enter` → `continue` → `Enter`
+4. When the reset time passes, it sends: `Escape` → `continue` → `Enter`
 5. The pane resumes automatically
 
 ## Requirements
