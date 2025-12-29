@@ -180,7 +180,7 @@ func drawPane(grid [][]string, p *tmux.Pane, selected bool, scaleX, scaleY float
 		// Show "claude code" label below if there's room
 		if centerY+1 < y2 {
 			titleStyle := lipgloss.NewStyle().Foreground(labelColor).Italic(true)
-			drawCenteredText(grid, "claude code", x1, x2, centerY+1, titleStyle)
+			drawCenteredText(grid, "Claude Code", x1, x2, centerY+1, titleStyle)
 		}
 	} else {
 		// Non-CC panes: just show title in italics
