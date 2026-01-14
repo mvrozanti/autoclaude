@@ -31,16 +31,17 @@ const (
 
 // Pane represents a tmux pane with its position and state
 type Pane struct {
-	ID              string
-	Left, Top       int
-	Width, Height   int
-	Title           string // Pane title (set by running application)
-	Mode            PaneMode
-	HasClaudeCode   bool
-	IsRateLimited   bool
-	RateLimitResets string    // Display string like "10pm"
-	RateLimitTime   time.Time // Parsed reset time
-	ContinueSent    bool      // Whether we've sent continue for this rate limit
+	ID                    string
+	Left, Top             int
+	Width, Height         int
+	Title                 string // Pane title (set by running application)
+	Mode                  PaneMode
+	HasClaudeCode         bool
+	IsRateLimited         bool
+	RateLimitResets       string    // Display string like "10pm" or empty if unknown
+	RateLimitTime         time.Time // Parsed reset time (zero if unknown)
+	ContinueSent          bool      // Whether we've sent continue for this rate limit
+	LastPeriodicContinue  time.Time // For unknown reset times: when we last sent periodic continue
 }
 
 // Center returns the center point of the pane

@@ -86,6 +86,21 @@ func TestCheckRateLimit_TimeFormats(t *testing.T) {
 			content:  "You've hit your limit · resets 11pm (Europe/London)",
 			wantTime: "11pm",
 		},
+		{
+			name:     "minutes remaining format",
+			content:  "⚠ Limit reached (resets 8m)",
+			wantTime: "8m",
+		},
+		{
+			name:     "minutes remaining double digit",
+			content:  "Limit reached (resets 45m)",
+			wantTime: "45m",
+		},
+		{
+			name:     "minutes remaining triple digit",
+			content:  "⚠ Limit reached (resets 120m)",
+			wantTime: "120m",
+		},
 	}
 
 	for _, tc := range cases {
@@ -96,6 +111,85 @@ func TestCheckRateLimit_TimeFormats(t *testing.T) {
 			}
 			if status.ResetsAt != tc.wantTime {
 				t.Errorf("expected ResetsAt to be '%s', got '%s'", tc.wantTime, status.ResetsAt)
+			}
+		})
+	}
+}
+
+func TestCheckRateLimit_MinutesFormat(t *testing.T) {
+	status := CheckRateLimit("⚠ Limit reached (resets 30m)")
+
+	if !status.IsLimited {
+		t.Error("expected IsLimited to be true")
+	}
+	if status.ResetsAt != "30m" {
+		t.Errorf("expected ResetsAt to be '30m', got '%s'", status.ResetsAt)
+	}
+	if status.ResetTime.IsZero() {
+		t.Error("expected ResetTime to be set")
+	}
+	// TimeUntil should be approximately 30 minutes (within 1 second tolerance)
+	expectedDuration := 30 * time.Minute
+	if status.TimeUntil < expectedDuration-time.Second || status.TimeUntil > expectedDuration+time.Second {
+		t.Errorf("expected TimeUntil to be ~30m, got %v", status.TimeUntil)
+	}
+}
+
+func TestCheckRateLimit_FallbackNoTime(t *testing.T) {
+	cases := []struct {
+		name    string
+		content string
+	}{
+		{
+			name:    "hit your limit without time",
+			content: "You've hit your limit",
+		},
+		{
+			name:    "hit your limit with curly apostrophe",
+			content: "You've hit your limit",
+		},
+		{
+			name:    "limit reached without time",
+			content: "Limit reached - please wait",
+		},
+		{
+			name:    "rate limited status",
+			content: "⚠ Rate limited",
+		},
+		{
+			name:    "limit reached with unparseable time format",
+			content: "Limit reached (resets in 2 hours)",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			status := CheckRateLimit(tc.content)
+			if !status.IsLimited {
+				t.Error("expected IsLimited to be true")
+			}
+			if status.ResetsAt != "" {
+				t.Errorf("expected ResetsAt to be empty for fallback, got '%s'", status.ResetsAt)
+			}
+			if !status.ResetTime.IsZero() {
+				t.Error("expected ResetTime to be zero for fallback")
+			}
+		})
+	}
+}
+
+func TestCheckRateLimit_NoMatchCases(t *testing.T) {
+	cases := []string{
+		"Normal output without rate limit",
+		"The limit of my patience",
+		"Rate your experience",
+	}
+
+	for _, content := range cases {
+		t.Run(content, func(t *testing.T) {
+			status := CheckRateLimit(content)
+			if status.IsLimited {
+				t.Errorf("expected IsLimited to be false for: %q", content)
 			}
 		})
 	}

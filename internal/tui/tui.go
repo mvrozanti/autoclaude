@@ -222,19 +222,30 @@ func (m *Model) pollPanes() {
 			pane.RateLimitResets = status.ResetsAt
 			pane.RateLimitTime = status.ResetTime
 
-			// Reset ContinueSent when a new rate limit appears
+			// Reset ContinueSent and LastPeriodicContinue when a new rate limit appears
 			if !wasLimited && status.IsLimited {
 				pane.ContinueSent = false
+				pane.LastPeriodicContinue = time.Time{}
 			}
 
-			// Auto-continue: when reset time has passed and we haven't sent yet
-			if pane.IsRateLimited &&
-				pane.Mode == tmux.ModeContinueOnRateLimit &&
-				!pane.ContinueSent &&
-				!pane.RateLimitTime.IsZero() &&
-				time.Now().After(pane.RateLimitTime) {
-				m.sendContinue(pane.ID)
-				pane.ContinueSent = true
+			// Auto-continue logic for rate-limited panes in auto mode
+			if pane.IsRateLimited && pane.Mode == tmux.ModeContinueOnRateLimit {
+				now := time.Now()
+
+				if !pane.RateLimitTime.IsZero() {
+					// Known reset time: send continue when time has passed
+					if !pane.ContinueSent && now.After(pane.RateLimitTime) {
+						m.sendContinue(pane.ID)
+						pane.ContinueSent = true
+					}
+				} else {
+					// Unknown reset time: send continue every 15 minutes
+					periodicInterval := 15 * time.Minute
+					if pane.LastPeriodicContinue.IsZero() || now.Sub(pane.LastPeriodicContinue) >= periodicInterval {
+						m.sendContinue(pane.ID)
+						pane.LastPeriodicContinue = now
+					}
+				}
 			}
 
 			// Test mode: trigger on test pattern (with cooldown)
@@ -250,6 +261,7 @@ func (m *Model) pollPanes() {
 			pane.RateLimitResets = ""
 			pane.RateLimitTime = time.Time{}
 			pane.ContinueSent = false
+			pane.LastPeriodicContinue = time.Time{}
 		}
 	}
 }
@@ -277,6 +289,7 @@ func (m *Model) updateLayout(layout *tmux.Layout) {
 				newPane.RateLimitResets = oldPane.RateLimitResets
 				newPane.RateLimitTime = oldPane.RateLimitTime
 				newPane.ContinueSent = oldPane.ContinueSent
+				newPane.LastPeriodicContinue = oldPane.LastPeriodicContinue
 			}
 		}
 	}
